@@ -6,17 +6,17 @@ use std::cmp::Ordering::{Less, Equal, Greater};
 
 enum UCollator {}
 
-#[link(name = "icui18n")]
-extern "C" {
-    fn ucol_open_52(loc: *const c_char, ec: *mut i32) -> *mut UCollator;
-    fn ucol_close_52(coll: *mut UCollator);
-    fn ucol_strcollUTF8_52(coll: *const UCollator,
-                           source: *const c_char,
-                           sourceLength: i32,
-                           target: *const c_char,
-                           sourceLength: i32,
-                           status: *mut i32)
-                           -> i32;
+#[link(name="icui18n")]
+extern {
+    fn __rs_ucol_open(loc: *const c_char, ec: *mut i32) -> *mut UCollator;
+    fn __rs_ucol_close(coll: *mut UCollator);
+    fn __rs_ucol_strcollUTF8(coll: *const UCollator,
+                             source: *const c_char,
+                             sourceLength: i32,
+                             target: *const c_char,
+                             sourceLength: i32,
+                             status: *mut i32)
+                             -> i32;
 }
 
 pub struct Collator {
@@ -26,7 +26,7 @@ pub struct Collator {
 impl Collator {
     pub fn open(loc: &str) -> Result<Collator, i32> {
         let mut err = 0;
-        let r = unsafe { ucol_open_52(loc.as_bytes().as_ptr() as *const c_char, &mut err) };
+        let r = unsafe { __rs_ucol_open(loc.as_bytes().as_ptr() as *const c_char, &mut err) };
         if err <= 0 {
             Ok(Collator { collator: r })
         } else {
@@ -37,12 +37,12 @@ impl Collator {
     pub fn cmp(&self, source: &str, target: &str) -> Result<Ordering, i32> {
         let mut err = 0;
         let r = unsafe {
-            ucol_strcollUTF8_52(self.collator,
-                                source.as_bytes().as_ptr() as *const c_char,
-                                source.as_bytes().len() as i32,
-                                target.as_bytes().as_ptr() as *const c_char,
-                                target.as_bytes().len() as i32,
-                                &mut err)
+            __rs_ucol_strcollUTF8(self.collator,
+                                  source.as_bytes().as_ptr() as *const c_char,
+                                  source.as_bytes().len() as i32,
+                                  target.as_bytes().as_ptr() as *const c_char,
+                                  target.as_bytes().len() as i32,
+                                  &mut err)
         };
         if err <= 0 {
             Ok(match r {
@@ -58,7 +58,7 @@ impl Collator {
 
 impl Drop for Collator {
     fn drop(&mut self) {
-        unsafe { ucol_close_52(self.collator) };
+        unsafe { __rs_ucol_close(self.collator) };
     }
 }
 
